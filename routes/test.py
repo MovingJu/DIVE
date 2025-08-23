@@ -5,6 +5,7 @@ import pandas as pd
 from dotenv import load_dotenv
 import os
 import requests
+from starlette.responses import RedirectResponse
 
 router = APIRouter(
     prefix="/db",
@@ -33,7 +34,8 @@ async def class_test(table_name: str):
 
 
 @router.post("/kakao/authentication/")
-async def kakaologin(id : str):
+async def kakaologin(jwt : str):
+    id = modules.decode_jwt_token(jwt)
     db = await modules.Manage.create()
     async with db.conn.cursor() as cursor:  
         await cursor.execute('SELECT user_type FROM users WHERE id = %s',(id))
@@ -80,7 +82,9 @@ async def kakaoregister(authCode : str):
             result=await cursor.fetchall()
         await db.close()
     
-    return userid
+    token = modules.create_jwt_token(userid)
+    return RedirectResponse(url=f"jasmap://oauth/kakao?JWT={token}")
+
 
     
     
