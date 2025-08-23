@@ -61,6 +61,12 @@ async def getMulriDistance(origin,destinations):
         distances[route['key']]=route['summary']['distance']
     return distances
 
-
-
-
+async def getGPStoKeyword(gps: tuple[float, float]):
+    keywords = ["아파트", "카페", "편의점"]
+    headers={"Authorization":f"KakaoAK {os.getenv("KAKAO_MAP_API_KEY") or ""}"}
+    url = f"https://dapi.kakao.com/v2/local/search/keyword.json"
+    params={
+        "x":gps[0],
+        "y":gps[1],
+        "radius":100
+    }
