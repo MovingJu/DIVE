@@ -51,7 +51,7 @@ class Url:
                     for i, (lon, lat) in enumerate(destinations)
                 ],
                 "radius": params.get("radius", 7000),
-                "priority": params.get("priority", "RECOMMEND")
+                "priority": params.get("priority", "TIME")
             }
 
     def __str__(self):
@@ -86,16 +86,16 @@ class Fetch:
 if __name__ == "__main__":
     async def main():
         # 단일 목적지 예제 (GET)
-        single = Url((127.10764, 37.40246), (127.11056, 37.39419))
+        single = Url((129.07509523457, 35.17992598569), (129.136018268316, 35.1690637154991))
         f1 = Fetch(single)
-        # print(await f1.fetch_async())
+        print(await f1.fetch_async())
 
         # 다중 목적지 예제 (POST)
-        multi = Url((127.13144, 37.44134),
-                    (127.14112, 37.44558),
-                    (127.14192, 37.44017),
-                    radius=5000)
-        f2 = Fetch(multi)
-        print(await f2.fetch_async())
+        # multi = Url((127.13144, 37.44134),
+        #             (127.14112, 37.44558),
+        #             (127.14192, 37.44017),
+        #             radius=5000)
+        # f2 = Fetch(multi)
+        # print(await f2.fetch_async())
 
     asyncio.run(main())
