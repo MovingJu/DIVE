@@ -10,7 +10,7 @@ def xy_to_gps(x: float, y: float) -> tuple[float, float] :
     to_wgs = Transformer.from_crs("EPSG:5181", "EPSG:4326", always_xy=True)
     return to_wgs.transform(x, y)
 
-def distribute_points_variable(lon1, lat1, lon2, lat2, area_m2 = 8_842_000, step=1000, max_per_line=6):
+async def distribute_points_variable(lon1, lat1, lon2, lat2, area_m2 = 8_842_000, step=1000, max_per_line=6):
     """
     출발-도착을 대각선으로 하는 마름모 안에 점 배치.
     - 출발~도착을 step(m) 간격으로 분할
@@ -59,21 +59,41 @@ def distribute_points_variable(lon1, lat1, lon2, lat2, area_m2 = 8_842_000, step
         if n_points == 1:
             qx, qy = px, py
             lat, lon = to_wgs.transform(qx, qy)[::-1]
-            # 아파트 조회
-            
-            line_points.append((lat, lon))
+            # gps = await modules.getGPStoKeyword((lon, lat))
+            # lat, lon = gps['y'], gps['x']
+            line_points.append((lon, lat))
         else:
             for j in range(n_points):
                 s = -w + (2 * w) * j / (n_points - 1)
                 qx, qy = px + s * nx, py + s * ny
                 lat, lon = to_wgs.transform(qx, qy)[::-1]
-                # 아파트 조회
-                line_points.append((lat, lon))
+                # gps = await modules.getGPStoKeyword((lon, lat))
+                # lat, lon = gps['y'], gps['x']
+                line_points.append((lon, lat))
 
         result.append(line_points)
 
     return result
 
+def extract_all_vertexes(api_response: dict) -> list[tuple[float, float]]:
+    """
+    카카오 길찾기 API 결과에서 모든 vertexes를 하나의 리스트로 추출
+    반환: [(lon, lat), (lon, lat), ...]
+    """
+    all_points = []
+
+    routes = api_response.get("routes", [])
+    for route in routes:
+        sections = route.get("sections", [])
+        for section in sections:
+            roads = section.get("roads", [])
+            for road in roads:
+                vertexes = road.get("vertexes", [])
+                # 2개씩 묶어서 (lon, lat) 추가
+                for i in range(0, len(vertexes), 2):
+                    all_points.append((vertexes[i], vertexes[i+1]))
+    
+    return all_points
 
 import math
 import heapq
@@ -82,96 +102,90 @@ import modules
 # 코스트 캐시 저장소
 _cost_cache = {}
 
-async def cost(gps: tuple[float, float], layer_nodes: list[tuple[float, float]], layer: int, weight=1.0, **params):
+async def cost(gps: tuple[float, float], next_node: tuple[float, float], layer: int, weight=40):
     """
     gps: 현재 노드 (lat, lon)
-    layer_nodes: 다음 레이어 전체 노드
+    next_node: 다음 레이어의 한 노드 (lat, lon)
     layer: 현재 레이어 인덱스
-    반환: 각 노드별 비용 리스트
+    반환: 단일 비용 값
     """
-    key = (gps, tuple(layer_nodes), layer)
+    key = (gps, next_node, layer)
     if key in _cost_cache:
         return _cost_cache[key]
 
-    # 카카오 API 요청
-    url = modules.Url(gps, *layer_nodes, radius=5000)
+    # 카카오 API 요청 (1대1)
+    url = modules.Url(gps, next_node)
     f2 = modules.Fetch(url)
     results = await f2.fetch_async()
+    
+    vertexes = extract_all_vertexes(results[0])
+    sobang_vertexes = function()
 
-    print(f"results : {results}, current : {params.get("layers", None)}, {params["idxs"]}")
+    sobang_cost = len(set(vertexes) & set(sobang_vertexes))
 
-    dists = []
     routes = results[0].get("routes", None)
-
     if routes is None:  # 경로 실패
-        dists = [float("inf")] * len(layer_nodes)
+        d = float("inf")
     else:
-        for r in routes:
-            d = r.get("summary", {}).get("distance", float("inf"))
-            dists.append(d + layer * weight)
+        d = routes[0].get("summary", {}).get("distance", float("inf"))
 
-    _cost_cache[key] = dists
-    return dists
-
+    cost_val = d + sobang_cost * weight
+    _cost_cache[key] = (cost_val, vertexes)
+    return cost_val
 
 async def shortest_path(tree, weight=0.2):
-    """
-    tree: [[(lat, lon)], [(lat, lon), ...], ..., [(lat, lon)]]
-    시작층 → 마지막층 최소 비용 경로 탐색
-    weight: 층 가중치 (크면 깊을수록 코스트가 더 커짐)
-    """
     n_layers = len(tree)
-    start = (0, 0)   # (layer, index)
+    start = (0, 0)
     goal_layer = n_layers - 1
 
-    # (누적 비용, layer, idx, 경로)
     pq: list[tuple[float, int, int, list]] = [(0, start[0], start[1], [tree[start[0]][start[1]]])]
-    visited = list()
+    visited = set()
 
     while pq:
         total_cost, layer, idx, path = heapq.heappop(pq)
 
-        # 목표 도달
         if layer == goal_layer:
             return path, visited
 
         if (layer, idx) in visited:
             continue
-        visited.append((layer, idx))
+        visited.add((layer, idx))
 
         current = tree[layer][idx]
-
         next_layer_nodes = tree[layer + 1]
-        costs = await cost(current, next_layer_nodes, layer, weight, layers=layer, idxs=idx)
-        for j, (next_node, c) in enumerate(zip(next_layer_nodes, costs)):
+
+        for j, next_node in enumerate(next_layer_nodes):
+            c = await cost(current, next_node, layer, weight)
             heapq.heappush(pq, (total_cost + c, layer + 1, j, path + [next_node]))
 
-    return None  # 경로 없음
+    return None
 
 
 
 if __name__ == "__main__":
     # === 사용 예시 ===
-    grid = distribute_points_variable(
-        129.061903026452, 35.1946006301351,
-        129.115262179836, 35.1785037434279
-    )
+    async def main():
+        grid = await distribute_points_variable(
+            129.061903026452, 35.1946006301351,
+            129.115262179836, 35.1785037434279
+        )
 
-    x, y = gps_to_xy(129.061903026452, 35.1946006301351)
-    a, b = gps_to_xy(129.115262179836, 35.1785037434279)
-    distance = math.sqrt((x - a) ** 2 + (y - b) ** 2)
-    print(f"distance : {distance} m")
+        x, y = gps_to_xy(129.061903026452, 35.1946006301351)
+        a, b = gps_to_xy(129.115262179836, 35.1785037434279)
+        distance = math.sqrt((x - a) ** 2 + (y - b) ** 2)
+        print(f"distance : {distance} m")
 
-    tot = 0
-    tot_req = 1
-    for line in grid:
-        tot += len(line)
-        tot_req *= len(line)
-        print(len(line))
-    print(f"total : {tot}")
-    print(f"total minimun requests : {distance // 700 - 1}\ntotal maximum requests : {tot}")
+        tot = 0
+        tot_req = 1
+        for line in grid:
+            tot += len(line)
+            tot_req *= len(line)
+            print(len(line))
+        print(f"total : {tot}")
+        print(f"total requests : {tot_req}")
 
-    # async def main():
-    #     print(await shortest_path(grid))
-    # import asyncio
-    # asyncio.run(main())
+        print(await shortest_path(grid))
+        print(f"cached : {_cost_cache}")
+
+    import asyncio
+    asyncio.run(main())
