@@ -99,6 +99,8 @@ import math
 import heapq
 import modules
 
+
+
 # 코스트 캐시 저장소
 _cost_cache = {}
 
@@ -117,9 +119,9 @@ async def cost(gps: tuple[float, float], next_node: tuple[float, float], layer: 
     url = modules.Url(gps, next_node)
     f2 = modules.Fetch(url)
     results = await f2.fetch_async()
-    
+
     vertexes = extract_all_vertexes(results[0])
-    sobang_vertexes = function()
+    
 
     sobang_cost = len(set(vertexes) & set(sobang_vertexes))
 
@@ -155,16 +157,20 @@ async def shortest_path(tree, weight=0.2):
         next_layer_nodes = tree[layer + 1]
 
         for j, next_node in enumerate(next_layer_nodes):
-            c = await cost(current, next_node, layer, weight)
+            c = await cost(current, next_node, layer)
             heapq.heappush(pq, (total_cost + c, layer + 1, j, path + [next_node]))
 
     return None
 
-
+sobang_vertexes: list[tuple[float, float]] = []
 
 if __name__ == "__main__":
     # === 사용 예시 ===
     async def main():
+
+        global sobang_vertexes
+        sobang_vertexes = await modules.getVertexes((129.061903026452, 35.1946006301351), (129.115262179836, 35.1785037434279))
+
         grid = await distribute_points_variable(
             129.061903026452, 35.1946006301351,
             129.115262179836, 35.1785037434279
@@ -185,7 +191,8 @@ if __name__ == "__main__":
         print(f"total requests : {tot_req}")
 
         print(await shortest_path(grid))
-        print(f"cached : {_cost_cache}")
+        with open("./exam.json", "wr") as f:
+            f.write(_cost_cache)
 
     import asyncio
     asyncio.run(main())
