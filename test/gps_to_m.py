@@ -67,7 +67,7 @@ def xy_to_gps(x: float, y: float) -> tuple[float, float] :
 from pyproj import Transformer
 import math
 
-def distribute_points_variable(lat1, lon1, lat2, lon2, area_m2, step=500, max_per_line=9):
+def distribute_points_variable(lon1, lat1, lon2, lat2, area_m2, step=500, max_per_line=9):
     """
     출발-도착을 대각선으로 하는 마름모 안에 점 배치.
     - 출발~도착을 step(m) 간격으로 분할
@@ -86,11 +86,16 @@ def distribute_points_variable(lat1, lon1, lat2, lon2, area_m2, step=500, max_pe
     dx, dy = x2 - x1, y2 - y1
     d1 = math.hypot(dx, dy)
 
-    # 다른 대각선 절반길이
-    h = min(area_m2, (x1 - x2) ** 2 + (y1 - y2) ** 2) / d1
+    if d1 == 0:
+        raise ValueError("출발점과 도착점이 동일합니다.")
+
+    # ✅ 다른 대각선 절반길이
+    d2 = (2 * area_m2) / d1
+    h = d2 / 2
 
     # 직교 단위벡터
     nx, ny = -dy / d1, dx / d1
+
 
     # 분할 개수
     n_div = int(d1 // step)
@@ -123,18 +128,25 @@ def distribute_points_variable(lat1, lon1, lat2, lon2, area_m2, step=500, max_pe
 
     return result
 
+if __name__ == "__main__":
+    # === 사용 예시 ===
+    grid = distribute_points_variable(
+        129.07509523457, 35.17992598569,
+        129.136018268316, 35.1690637154991,
+        area_m2=284_200,
+        step=1_000,
+        max_per_line=6
+    )
 
-# === 사용 예시 ===
-grid = distribute_points_variable(
-    35.1778640159138, 129.075643947596,
-    35.1690637154991, 129.136018268316,
-    area_m2=284_200,
-    step=500,
-    max_per_line=20
-)
+    x, y = gps_to_xy(127.13144306487084, 37.44134209110179)
+    a, b = gps_to_xy(127.14112393388389, 37.44558371517034)
+    print(f"distance : {math.sqrt((x - a) ** 2 + (y - b) ** 2)} m")
 
-tot = 0
-for line in grid:
-    tot += len(line)
-    print(len(line))
-print(f"total : {tot}")
+    tot = 0
+    tot_req = 1
+    for line in grid:
+        tot += len(line)
+        tot_req *= len(line)
+        print(len(line))
+    print(f"total : {tot}")
+    print(f"total minimun requests : {tot_req}")
