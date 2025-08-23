@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 # Copy uv binary from official uv image
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -11,7 +11,6 @@ COPY pyproject.toml uv.lock ./
 
 # Install dependencies (no mount syntax, for Railway compatibility)
 RUN uv sync --frozen --no-install-project
-
 # Copy rest of the project
 COPY . .
 

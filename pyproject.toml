@@ -3,7 +3,7 @@ name = "dive"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi[all]>=0.116.1",
     "uvicorn[all]>=0.35.0",
@@ -14,4 +14,7 @@ dependencies = [
     "pandas>=2.3.2",
     "pyproj>=3.7.1",
     "shapely>=2.1.1",
+    "pip>=25.2",
+    "pyjwt==1.7.1",
+    "jwt>=1.4.0",
 ]

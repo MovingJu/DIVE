@@ -86,6 +86,13 @@ async def kakaoregister(authCode : str):
     return RedirectResponse(url=f"jasmap://oauth/kakao?JWT={token}")
 
 
+
+@router.get('/data/adress/')
+async def getadresstoxy(adress : str):
+    return {"result":modules.getxyFromAdress(adress)}
+    
+
+
     
     
     

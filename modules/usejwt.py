@@ -1,7 +1,7 @@
-import jwt
 import datetime
 from dotenv import load_dotenv
 import os
+import jwt
 
 load_dotenv()
 
