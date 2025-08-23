@@ -3,8 +3,8 @@ import modules
 import json
 
 router = APIRouter(
-    prefix="/agent",
-    tags=["응급대원용 경로 조회"]
+    prefix="/users",
+    tags=["일반 사용자용 경로 조회"]
 )
 
 def extract_all_vertexes(api_response: dict) -> list[tuple[float, float]]:

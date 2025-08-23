@@ -14,4 +14,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(routes.agent_route.router)
 app.include_router(routes.test.router)

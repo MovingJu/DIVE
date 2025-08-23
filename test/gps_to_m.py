@@ -169,7 +169,7 @@ if __name__ == "__main__":
     async def main():
 
         global sobang_vertexes
-        sobang_vertexes = await modules.getVertexes((129.061903026452, 35.1946006301351), (129.115262179836, 35.1785037434279))
+        sobang_vertexes = await modules.getVertexes((129.105747814753, 35.1834432601063), (129.08586569729, 35.1893503587694))
 
         grid = await distribute_points_variable(
             129.061903026452, 35.1946006301351,
@@ -191,8 +191,6 @@ if __name__ == "__main__":
         print(f"total requests : {tot_req}")
 
         print(await shortest_path(grid))
-        with open("./exam.json", "wr") as f:
-            f.write(_cost_cache)
 
     import asyncio
     asyncio.run(main())
