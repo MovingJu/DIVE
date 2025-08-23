@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 import aiomysql
 import modules
+from modules import apis
 
 router = APIRouter(
     prefix="/db",
@@ -26,3 +27,10 @@ async def class_test(table_name: str):
     await db.close()
 
     return {"result": df.to_dict(orient="records")}
+
+
+
+@router.get("/agent/route/")
+async def agentroute(origin : tuple, destination : tuple, waypoints : list=[]):
+    vertexes = await apis.getVertexes(origin,destination,waypoints)
+    return {'vertexes' : vertexes}

@@ -22,12 +22,12 @@ class Url:
         """
         self.base_url = "https://apis-navi.kakaomobility.com/v1/directions"
         if angle is None:
-            self.origin = f"{origin[1]},{origin[0]}"
+            self.origin = f"{origin[0]},{origin[1]}"
         else:
-            self.origin = f"{origin[1]},{origin[0]},angle={angle}"
-        self.destination = f"{destination[1]},{destination[0]}"
+            self.origin = f"{origin[0]},{origin[1]},angle={angle}"
+        self.destination = f"{destination[0]},{destination[1]}"
         self.summary = params.get("summary", False)
-        self.waypoints = "|".join(f"{wp[1]},{wp[0]}" for wp in waypoints)
+        self.waypoints = "|".join(f"{wp[0]},{wp[1]}" for wp in waypoints)
         self.params = {
             "origin" : self.origin,
             "destination" : self.destination,
@@ -73,5 +73,5 @@ if __name__ == "__main__":
         url = [Url((37.402464820205246, 127.10764191124568),(37.39419693653072, 127.11056336672839)), Url((37.402464820205246, 127.10764191124568),(37.39419693653072, 127.11056336672839)), Url((37.402464820205246, 127.10764191124568),(37.39419693653072, 127.11056336672839))]
         print(url)
         f = Fetch(url[0], url[1], url[2])
-        print(await f.fetch())
+        print(await f.fetch_async())
     asyncio.run(main())
