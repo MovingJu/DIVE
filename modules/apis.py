@@ -2,7 +2,6 @@ from dotenv import load_dotenv
 import os
 import requests
 import numpy as np
-import modules
 
 load_dotenv()
 kakao_api_key=os.getenv('KAKAO_API_KEY')
@@ -28,7 +27,7 @@ async def getroutes(origin, destination, waypoints=[]):
     headers={"Authorization":f'KakaoAK {kakao_api_key}','Content-Type':'application/json'}
     query=''
     if(waypoints):
-        query={'orgiin':origin,'destination':destination,'waypoints':waypoints,'alternatives':'true'}
+        query={'orgiin':origin,'destination':destination,'waypoints':waypoints,'alternatves':'true'}
     else:
         query={'origin':origin,'destination':destination,'alternatives':'true'}
     result=requests.get(url=url,headers=headers,params=query)
@@ -49,3 +48,19 @@ async def getVertexes(origin,destination,waypoints=[]):
 async def getDistance(origin,destination,waypoints=[]):
     result=await getroutes(origin,destination,waypoints)
     return [i['summary']['distance'] for i in result['routes']]
+
+
+
+async def getMulriDistance(origin,destinations):
+    url='https://apis-navi.kakaomobility.com/v1/destinations/directions'
+    headers={"Authorization":f'KakaoAK {kakao_api_key}','Content-Type':'application/json'}
+    query={'origin':origin,'destinations':destinations,'radius':6000} 
+    result= requests.post(url=url,headers=headers,json=query)
+    distances=dict()
+    for route in result.json()['routes']:
+        distances[route['key']]=route['summary']['distance']
+    return distances
+
+
+
+

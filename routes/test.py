@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 import aiomysql
 import modules
-from modules import apis
+import pandas as pd
 
 router = APIRouter(
     prefix="/db",
@@ -27,3 +27,13 @@ async def class_test(table_name: str):
     await db.close()
 
     return {"result": df.to_dict(orient="records")}
+
+@router.post("kakao/login/")
+async def kakaologin(name : str, email : str):
+    db = await modules.Manage.create()
+    async with db.conn.cursor() as cursor:  
+        await cursor.execute('SELECT user_type FROM users WHERE name = %s AND email = %s',(name,email))
+        result=await cursor.fetchall()
+    df=pd.DataFrame(result,columns=['user_type'])
+    await db.close()
+    return {"result" : df.to_dict(orient='records')}
