@@ -75,6 +75,25 @@ async def distribute_points_variable(lon1, lat1, lon2, lat2, area_m2 = 8_842_000
 
     return result
 
+def extract_all_vertexes(api_response: dict) -> list[tuple[float, float]]:
+    """
+    카카오 길찾기 API 결과에서 모든 vertexes를 하나의 리스트로 추출
+    반환: [(lon, lat), (lon, lat), ...]
+    """
+    all_points = []
+
+    routes = api_response.get("routes", [])
+    for route in routes:
+        sections = route.get("sections", [])
+        for section in sections:
+            roads = section.get("roads", [])
+            for road in roads:
+                vertexes = road.get("vertexes", [])
+                # 2개씩 묶어서 (lon, lat) 추가
+                for i in range(0, len(vertexes), 2):
+                    all_points.append((vertexes[i], vertexes[i+1]))
+    
+    return all_points
 
 import math
 import heapq
@@ -83,71 +102,59 @@ import modules
 # 코스트 캐시 저장소
 _cost_cache = {}
 
-async def cost(gps: tuple[float, float], layer_nodes: list[tuple[float, float]], layer: int, weight=1.0, **params):
+async def cost(gps: tuple[float, float], next_node: tuple[float, float], layer: int, weight=1.0):
     """
     gps: 현재 노드 (lat, lon)
-    layer_nodes: 다음 레이어 전체 노드
+    next_node: 다음 레이어의 한 노드 (lat, lon)
     layer: 현재 레이어 인덱스
-    반환: 각 노드별 비용 리스트
+    반환: 단일 비용 값
     """
-    key = (gps, tuple(layer_nodes), layer)
+    key = (gps, next_node, layer)
     if key in _cost_cache:
         return _cost_cache[key]
 
-    # 카카오 API 요청
-    url = modules.Url(gps, *layer_nodes, radius=5000)
+    # 카카오 API 요청 (1대1)
+    url = modules.Url(gps, next_node, radius=5000)
     f2 = modules.Fetch(url)
     results = await f2.fetch_async()
 
-    print(f"results : {results}, current : {params.get("layers", None)}, {params["idxs"]}")
-
-    dists = []
     routes = results[0].get("routes", None)
-
     if routes is None:  # 경로 실패
-        dists = [float("inf")] * len(layer_nodes)
+        d = float("inf")
     else:
-        for r in routes:
-            d = r.get("summary", {}).get("distance", float("inf"))
-            dists.append(d + layer * weight)
+        d = routes[0].get("summary", {}).get("distance", float("inf"))
 
-    _cost_cache[key] = dists
-    return dists
-
+    cost_val = d + layer * weight
+    _cost_cache[key] = cost_val
+    return cost_val
 
 async def shortest_path(tree, weight=0.2):
-    """
-    tree: [[(lat, lon)], [(lat, lon), ...], ..., [(lat, lon)]]
-    시작층 → 마지막층 최소 비용 경로 탐색
-    weight: 층 가중치 (크면 깊을수록 코스트가 더 커짐)
-    """
     n_layers = len(tree)
-    start = (0, 0)   # (layer, index)
+    start = (0, 0)
     goal_layer = n_layers - 1
 
-    # (누적 비용, layer, idx, 경로)
     pq: list[tuple[float, int, int, list]] = [(0, start[0], start[1], [tree[start[0]][start[1]]])]
-    visited = list()
+    visited = set()
 
     while pq:
         total_cost, layer, idx, path = heapq.heappop(pq)
 
-        # 목표 도달
         if layer == goal_layer:
             return path, visited
 
         if (layer, idx) in visited:
             continue
-        visited.append((layer, idx))
+        visited.add((layer, idx))
 
         current = tree[layer][idx]
-
         next_layer_nodes = tree[layer + 1]
-        costs = await cost(current, next_layer_nodes, layer, weight, layers=layer, idxs=idx)
-        for j, (next_node, c) in enumerate(zip(next_layer_nodes, costs)):
+
+        for j, next_node in enumerate(next_layer_nodes):
+            c = await cost(current, next_node, layer, weight)
             heapq.heappush(pq, (total_cost + c, layer + 1, j, path + [next_node]))
 
-    return None  # 경로 없음
+    return None
+
 
 
 if __name__ == "__main__":
