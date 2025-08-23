@@ -11,7 +11,6 @@ COPY pyproject.toml uv.lock ./
 
 # Install dependencies (no mount syntax, for Railway compatibility)
 RUN uv sync --frozen --no-install-project
-
 # Copy rest of the project
 COPY . .
 
