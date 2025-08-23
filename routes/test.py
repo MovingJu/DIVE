@@ -56,12 +56,12 @@ async def kakaologin(jwt : str):
 
 
 @router.get("/kakao/authcode")
-async def kakaoregister(authCode : str):
+async def kakaoregister(code : str):
     data = {
         'grant_type': 'authorization_code',  
         'client_id': os.getenv('KAKAO_API_KEY'),              
         'redirect_uri': os.getenv('REDIRECT_URI'),            
-        'code': authCode     
+        'code': code     
     }
 
     # 카카오 인증 서버에 액세스 토큰 요청
