@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os
 import requests
 from starlette.responses import RedirectResponse
+import httpx
 
 router = APIRouter(
     prefix="/db",
@@ -53,64 +54,71 @@ async def kakaologin(jwt : str):
     await db.close()
     return {"result" : df.to_dict(orient='records')}
     
-
+kakao_api_key = os.getenv("KAKAO_API_KEY")
+redirect_uri = os.getenv("REDIRECT_URI")
 
 @router.get("/kakao/authcode")
-async def kakaoregister(code : str):
-    data = {
-        'grant_type': 'authorization_code',  
-        'client_id': os.getenv('KAKAO_API_KEY'),              
-        'redirect_uri': os.getenv('REDIRECT_URI'),            
-        'code': code     
-    }
+async def kakaoregister(code: str):
+    # 1. Kakao API: 액세스 토큰 요청 (비동기)
+    async with httpx.AsyncClient() as client:
+        data = {
+            'grant_type': 'authorization_code',
+            'client_id': kakao_api_key,
+            'redirect_uri': redirect_uri,
+            'code': code,
+        }
+        resp = await client.post("https://kauth.kakao.com/oauth/token", data=data)
+        try:
+            resp.raise_for_status()
+            token = resp.json().get('access_token')
+            if not token:
+                return {"error": "카카오 access token 발급 실패"}
+        except Exception as e:
+            return {"error": "카카오 token error", "detail": str(e)}
 
-    # 카카오 인증 서버에 액세스 토큰 요청
-    resp = requests.post("https://kauth.kakao.com/oauth/token", data=data)
-    
-    token=''
-    try:
-        token = resp.json()['access_token'] 
-    except:
-        return {"error":'카카오 token error'}
+        # 2. Kakao API: 유저 정보 요청
+        user_resp = await client.get(
+            "https://kapi.kakao.com/v2/user/me",
+            headers={'Authorization': f'Bearer {token}'}
+        )
+        try:
+            userinfo = user_resp.json()
+            userid = userinfo['id']
+            username = userinfo['properties']['nickname']
+            useremail = userinfo['kakao_account'].get('email', None)
+        except Exception:
+            return {'error': 'userinfo request error'}
 
-
-    headers = {
-        'Authorization': 'Bearer ' + token  
-    }
-
-    user = requests.get("https://kapi.kakao.com/v2/user/me", headers=headers)
-    userinfo = ''
-    userid = ''
-    username=''
-    useremail=''
-    try:
-        userinfo=user.json()
-        userid=userinfo['id']
-        username=userinfo['properties']['nickname']
-        useremail=userinfo['kakao_account']['email']
-    except:
-        return {'error':'userinfo request error'}
-          
+    # 3. DB 연결 및 사용자 존재 확인 후 신규 등록
     db = await modules.Manage.create()
-    async with db.conn.cursor() as cursor:  
-        await cursor.execute('SELECT EXISTS(SELECT 1 FROM users WHERE id = %s) AS exist',(userid))
-        result=await cursor.fetchall()
-    await db.close()
-    if(result[0][0]):
-        pass
-    else:
-        db = await modules.Manage.create()
-        async with db.conn.cursor() as cursor:  
-            await cursor.execute("INSERT INTO users (id, name, email, user_type) VALUES (%s, %s, %s,0)",(userid,username,useremail))
-            result=await cursor.fetchall()
-        await db.close()
-    
-    token = ''
     try:
-        token = modules.create_jwt_token(userid)
-        return RedirectResponse(url=f"jasmap://oauth/kakao?JWT={token}")
-    except:
-        return {"error":'jwt error'}
+        async with db.conn.cursor() as cursor:
+            await cursor.execute(
+                'SELECT EXISTS(SELECT 1 FROM users WHERE id = %s) AS exist', (userid,)
+            )
+            result = await cursor.fetchone()
+            exists = None
+            if isinstance(result, dict) and 'exist' in result:
+                exists = result['exist']
+            elif result:
+                exists = result[0]
+
+            if not exists:
+                await cursor.execute(
+                    "INSERT INTO users (id, name, email, user_type) VALUES (%s, %s, %s, 0)",
+                    (userid, username, useremail)
+                )
+                await db.conn.commit()
+    finally:
+        await db.close()
+
+    # 4. JWT 생성 및 Redirect 응답
+    try:
+        jwt_token = modules.create_jwt_token(userid)
+    except Exception as e:
+        return {"error": 'jwt error', "detail": str(e)}
+
+    return RedirectResponse(url=f"jasmap://oauth/kakao?JWT={jwt_token}")
 
 
 
