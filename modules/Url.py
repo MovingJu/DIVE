@@ -62,12 +62,10 @@ class Fetch:
         response = await client.get(url.__str__())
         return response.json()
     
-    async def fetch(self):
-        results = []
-        async with httpx.AsyncClient(headers=self.headers) as client:
-            for url in self.urls:
-                res = await Fetch.make_request(url, client)
-                results.append(res)
+    async def fetch_async(self):
+        async with httpx.AsyncClient() as client:
+            tasks = [Fetch.make_request(url, client) for url in self.urls]
+            results = await asyncio.gather(*tasks)
         return results
 
 if __name__ == "__main__":
