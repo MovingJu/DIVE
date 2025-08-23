@@ -10,7 +10,7 @@ def xy_to_gps(x: float, y: float) -> tuple[float, float] :
     to_wgs = Transformer.from_crs("EPSG:5181", "EPSG:4326", always_xy=True)
     return to_wgs.transform(x, y)
 
-def distribute_points_variable(lon1, lat1, lon2, lat2, area_m2 = 8_842_000, step=1000, max_per_line=6):
+async def distribute_points_variable(lon1, lat1, lon2, lat2, area_m2 = 8_842_000, step=1000, max_per_line=6):
     """
     출발-도착을 대각선으로 하는 마름모 안에 점 배치.
     - 출발~도착을 step(m) 간격으로 분할
@@ -59,16 +59,17 @@ def distribute_points_variable(lon1, lat1, lon2, lat2, area_m2 = 8_842_000, step
         if n_points == 1:
             qx, qy = px, py
             lat, lon = to_wgs.transform(qx, qy)[::-1]
-            # 아파트 조회
-            
-            line_points.append((lat, lon))
+            # gps = await modules.getGPStoKeyword((lon, lat))
+            # lat, lon = gps['y'], gps['x']
+            line_points.append((lon, lat))
         else:
             for j in range(n_points):
                 s = -w + (2 * w) * j / (n_points - 1)
                 qx, qy = px + s * nx, py + s * ny
                 lat, lon = to_wgs.transform(qx, qy)[::-1]
-                # 아파트 조회
-                line_points.append((lat, lon))
+                # gps = await modules.getGPStoKeyword((lon, lat))
+                # lat, lon = gps['y'], gps['x']
+                line_points.append((lon, lat))
 
         result.append(line_points)
 
@@ -149,29 +150,29 @@ async def shortest_path(tree, weight=0.2):
     return None  # 경로 없음
 
 
-
 if __name__ == "__main__":
     # === 사용 예시 ===
-    grid = distribute_points_variable(
-        129.061903026452, 35.1946006301351,
-        129.115262179836, 35.1785037434279
-    )
+    async def main():
+        grid = await distribute_points_variable(
+            129.061903026452, 35.1946006301351,
+            129.115262179836, 35.1785037434279
+        )
 
-    x, y = gps_to_xy(129.061903026452, 35.1946006301351)
-    a, b = gps_to_xy(129.115262179836, 35.1785037434279)
-    distance = math.sqrt((x - a) ** 2 + (y - b) ** 2)
-    print(f"distance : {distance} m")
+        x, y = gps_to_xy(129.061903026452, 35.1946006301351)
+        a, b = gps_to_xy(129.115262179836, 35.1785037434279)
+        distance = math.sqrt((x - a) ** 2 + (y - b) ** 2)
+        print(f"distance : {distance} m")
 
-    tot = 0
-    tot_req = 1
-    for line in grid:
-        tot += len(line)
-        tot_req *= len(line)
-        print(len(line))
-    print(f"total : {tot}")
-    print(f"total minimun requests : {distance // 700 - 1}\ntotal maximum requests : {tot}")
+        tot = 0
+        tot_req = 1
+        for line in grid:
+            tot += len(line)
+            tot_req *= len(line)
+            print(len(line))
+        print(f"total : {tot}")
+        print(f"total requests : {tot_req}")
 
-    # async def main():
-    #     print(await shortest_path(grid))
-    # import asyncio
-    # asyncio.run(main())
+        # print(await shortest_path(grid))
+
+    import asyncio
+    asyncio.run(main())

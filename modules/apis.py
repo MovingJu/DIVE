@@ -62,11 +62,44 @@ async def getMulriDistance(origin,destinations):
     return distances
 
 async def getGPStoKeyword(gps: tuple[float, float]):
+    import httpx
     keywords = ["아파트", "카페", "편의점"]
-    headers={"Authorization":f"KakaoAK {os.getenv("KAKAO_MAP_API_KEY") or ""}"}
-    url = f"https://dapi.kakao.com/v2/local/search/keyword.json"
-    params={
-        "x":gps[0],
-        "y":gps[1],
-        "radius":100
+    headers = {
+        "Authorization": f"KakaoAK {os.getenv('KAKAO_API_KEY') or ''}"
     }
+    url = "https://dapi.kakao.com/v2/local/search/keyword.json"
+
+    closest = {
+        "d": float("inf"),
+        "x": None,
+        "y": None
+    }
+
+    async with httpx.AsyncClient() as client:
+        for kw in keywords:
+            params = {
+                "x": gps[0],
+                "y": gps[1],
+                "radius": 500,
+                "query": kw,
+                "sort": "distance"
+            }
+            response = await client.get(url, headers=headers, params=params)
+            data = response.json()
+
+            for doc in data.get("documents", []):
+                dist = float(doc.get("distance", float("inf")))
+                if dist < closest["d"]:
+                    closest["d"] = dist
+                    closest["x"] = float(doc["x"])
+                    closest["y"] = float(doc["y"])
+    return closest
+
+
+if __name__ == "__main__":
+    from asyncio import run
+    async def main():
+        result = await getGPStoKeyword((129.061903026452, 35.1946006301351))
+        print(result)
+    run(main())
+    

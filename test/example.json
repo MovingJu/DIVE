@@ -1,25 +1,85 @@
 [
     {
-        "trans_id": "0198d7da272a7435abb5e711bd6ccb8b",
-        "routes": [
+        "documents": [],
+        "meta": {
+            "is_end": true,
+            "pageable_count": 0,
+            "same_name": {
+                "keyword": "아파트",
+                "region": [],
+                "selected_region": ""
+            },
+            "total_count": 0
+        }
+    },
+    {
+        "documents": [
             {
-                "result_code": 0,
-                "result_msg": "길찾기 성공",
-                "key": "0",
-                "summary": {
-                    "distance": 1419,
-                    "duration": 312
-                }
+                "address_name": "부산 동래구 사직동 960",
+                "category_group_code": "CE7",
+                "category_group_name": "카페",
+                "category_name": "음식점 > 카페",
+                "distance": "84",
+                "id": "1099908719",
+                "phone": "",
+                "place_name": "자이언츠카페",
+                "place_url": "http://place.map.kakao.com/1099908719",
+                "road_address_name": "부산 동래구 사직로 45",
+                "x": "129.06115854323963",
+                "y": "35.19505415503278"
+            }
+        ],
+        "meta": {
+            "is_end": true,
+            "pageable_count": 1,
+            "same_name": {
+                "keyword": "카페",
+                "region": [],
+                "selected_region": ""
+            },
+            "total_count": 1
+        }
+    },
+    {
+        "documents": [
+            {
+                "address_name": "부산 동래구 사직동 749-3",
+                "category_group_code": "CS2",
+                "category_group_name": "편의점",
+                "category_name": "가정,생활 > 편의점 > 세븐일레븐",
+                "distance": "73",
+                "id": "10475962",
+                "phone": "051-506-9697",
+                "place_name": "세븐일레븐 사직야구장본점",
+                "place_url": "http: //place.map.kakao.com/10475962",
+                "road_address_name": "부산 동래구 사직로 45",
+                "x": "129.06120357080857",
+                "y": "35.19492452290668"
             },
             {
-                "result_code": 0,
-                "result_msg": "길찾기 성공",
-                "key": "1",
-                "summary": {
-                    "distance": 1383,
-                    "duration": 277
-                }
+                "address_name": "부산 동래구 사직동 749-3",
+                "category_group_code": "CS2",
+                "category_group_name": "편의점",
+                "category_name": "가정,생활 > 편의점 > 세븐일레븐",
+                "distance": "64",
+                "id": "16949868",
+                "phone": "",
+                "place_name": "세븐일레븐 사직야구장2호점",
+                "place_url": "http: //place.map.kakao.com/16949868",
+                "road_address_name": "부산 동래구 사직로 45",
+                "x": "129.06123726074784",
+                "y": "35.19478066526188"
             }
-        ]
+        ],
+        "meta": {
+            "is_end": true,
+            "pageable_count": 2,
+            "same_name": {
+                "keyword": "편의점",
+                "region": [],
+                "selected_region": ""
+            },
+            "total_count": 2
+        }
     }
 ]
