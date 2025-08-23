@@ -1,0 +1,14 @@
+[project]
+name = "dive"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi[all]>=0.116.1",
+    "uvicorn[all]>=0.35.0",
+    "aiomysql>=0.2.0",
+    "httpx>=0.28.1",
+    "requests>=2.32.4",
+    "dotenv>=0.9.9",
+]
