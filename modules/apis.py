@@ -42,7 +42,11 @@ async def getVertexes(origin,destination,waypoints=[]):
             for road in section['roads']:
                 vertexes.extend(road['vertexes'])
         results.append(vertexes)
-    return results
+
+    vertexes=[]
+    for i in range(0,len(results[0]),2):
+        vertexes.append((results[i],results[i+1]))
+    return vertexes
             
 
 async def getDistance(origin,destination,waypoints=[]):
