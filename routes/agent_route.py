@@ -2,6 +2,7 @@ from fastapi import APIRouter
 import modules
 import json
 
+
 router = APIRouter(
     prefix="/agent",
     tags=["응급대원용 경로 조회"]

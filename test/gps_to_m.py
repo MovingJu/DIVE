@@ -104,7 +104,7 @@ import modules
 # 코스트 캐시 저장소
 _cost_cache = {}
 
-async def cost(gps: tuple[float, float], next_node: tuple[float, float], layer: int, weight=40):
+async def cost(gps: tuple[float, float], next_node: tuple[float, float], layer: int, weight=20):
     """
     gps: 현재 노드 (lat, lon)
     next_node: 다음 레이어의 한 노드 (lat, lon)
@@ -113,7 +113,7 @@ async def cost(gps: tuple[float, float], next_node: tuple[float, float], layer: 
     """
     key = (gps, next_node, layer)
     if key in _cost_cache:
-        return _cost_cache[key]
+        return _cost_cache[key][0]
 
     # 카카오 API 요청 (1대1)
     url = modules.Url(gps, next_node)
@@ -131,7 +131,7 @@ async def cost(gps: tuple[float, float], next_node: tuple[float, float], layer: 
     else:
         d = routes[0].get("summary", {}).get("distance", float("inf"))
 
-    cost_val = d + sobang_cost * weight
+    cost_val = d + sobang_cost * weight + layer * weight * 10
     _cost_cache[key] = (cost_val, vertexes)
     return cost_val
 
@@ -141,7 +141,7 @@ async def shortest_path(tree, weight=0.2):
     goal_layer = n_layers - 1
 
     pq: list[tuple[float, int, int, list]] = [(0, start[0], start[1], [tree[start[0]][start[1]]])]
-    visited = set()
+    visited = list()
 
     while pq:
         total_cost, layer, idx, path = heapq.heappop(pq)
@@ -151,14 +151,14 @@ async def shortest_path(tree, weight=0.2):
 
         if (layer, idx) in visited:
             continue
-        visited.add((layer, idx))
+        visited.append((layer, idx))
 
         current = tree[layer][idx]
         next_layer_nodes = tree[layer + 1]
 
         for j, next_node in enumerate(next_layer_nodes):
             c = await cost(current, next_node, layer)
-            heapq.heappush(pq, (total_cost + c, layer + 1, j, path + [next_node]))
+            heapq.heappush(pq, (c, layer + 1, j, path + [next_node]))
 
     return None
 
@@ -190,7 +190,8 @@ if __name__ == "__main__":
         print(f"total : {tot}")
         print(f"total requests : {tot_req}")
 
-        print(await shortest_path(grid))
+        vertexes, _ = await shortest_path(grid)
+        print(vertexes)
 
     import asyncio
     asyncio.run(main())
