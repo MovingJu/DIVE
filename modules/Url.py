@@ -3,75 +3,99 @@ from dotenv import load_dotenv
 import os, httpx, asyncio
 
 load_dotenv()
+
 class Url:
     """
-    Url 조작을 위한 클래스. 별로 쓸 필요는 없음. 클린한 코드를 지향하는 당신 츄라이츄라이.
+    단일 목적지 → GET
+    다중 목적지 → POST
     """
-    def __init__(self, origin: tuple[float, float], destination: tuple[float, float], angle: int | None = None, waypoints: list[tuple[float, float]] = [], **params) -> None:
+    def __init__(self, origin: tuple[float, float], *destinations: tuple[float, float], angle: int | None = None, waypoints: list[tuple[float, float]] = [], **params) -> None:
         """
-        ### 필수 쿼리
-        - origin : 출발지점 GPS 좌표 튜플로 ()
-        - destination : 도착지점 GPS 좌표 튜플로
-        
-        ### 부가 쿼리
-        - angle : 출발 각도
-        - waypoints : 경유지들 GPS좌표 리스트로 넣기
+        origin: (lon, lat)
+        destinations: (lon, lat) ... (여러 개 가능)
+        """
+        self.is_multi = len(destinations) > 1
+        self.angle = angle
+        self.params = params
 
-        ### 최적화 쿼리
-        - summary : 총 거리 등등만 필요하면 이거 True로 하기
-        """
-        self.base_url = "https://apis-navi.kakaomobility.com/v1/directions"
-        if angle is None:
-            self.origin = f"{origin[1]},{origin[0]}"
+        if not self.is_multi:
+            # 단일 목적지 → GET
+            self.base_url = "https://apis-navi.kakaomobility.com/v1/directions"
+            if angle is None:
+                self.origin = f"{origin[0]},{origin[1]}"
+            else:
+                self.origin = f"{origin[0]},{origin[1]},angle={angle}"
+            self.destination = f"{destinations[0][0]},{destinations[0][1]}"
+            self.waypoints = "|".join(f"{wp[0]},{wp[1]}" for wp in waypoints)
+            self.query = {
+                "origin": self.origin,
+                "destination": self.destination,
+                "waypoints": self.waypoints,
+                "summary": params.get("summary", False),
+                "priority": "RECOMMEND",
+                "car_fuel": "GASOLINE",
+                "car_hipass": "false",
+                "alternatives": "false",
+                "road_details": "false"
+            }
         else:
-            self.origin = f"{origin[1]},{origin[0]},angle={angle}"
-        self.destination = f"{destination[1]},{destination[0]}"
-        self.summary = params.get("summary", False)
-        self.waypoints = "|".join(f"{wp[1]},{wp[0]}" for wp in waypoints)
-        self.params = {
-            "origin" : self.origin,
-            "destination" : self.destination,
-            "waypoints" : self.waypoints,
-            "summary" : self.summary,
-            "priority" : "RECOMMEND",
-            "car_fuel" : "GASOLINE",
-            "car_hipass" : "false",
-            "alternatives" : "false",
-            "road_details" : "false"
-        }
-        for key, val in params.items():
-            self.params[key] = val
+            # 다중 목적지 → POST
+            self.base_url = "https://apis-navi.kakaomobility.com/v1/destinations/directions"
+            self.body = {
+                "origin": {
+                    "x": str(origin[0]),
+                    "y": str(origin[1])
+                },
+                "destinations": [
+                    {"x": str(lon), "y": str(lat), "key": str(i)}
+                    for i, (lon, lat) in enumerate(destinations)
+                ],
+                "radius": params.get("radius", 7000),
+                "priority": params.get("priority", "RECOMMEND")
+            }
 
     def __str__(self):
-        query = urlencode(self.params)
-        return f"{self.base_url}?{query}"
-    
-    def set_params(self, **params: str):
-        for key, val in params.items():
-            self.params[key] = val
+        if self.is_multi:
+            return self.base_url
+        else:
+            return f"{self.base_url}?{urlencode(self.query)}"
+
 
 class Fetch:
     def __init__(self, *url: Url) -> None:
         self.headers = {
-            "Authorization" : f"KakaoAK {os.getenv('KAKAO_API_KEY') or ''}"
+            "Authorization": f"KakaoAK {os.getenv('KAKAO_API_KEY') or ''}",
+            "Content-Type": "application/json"
         }
         self.urls = url
-    
-    @staticmethod
-    async def make_request(url: Url, client: httpx.AsyncClient):
-        response = await client.get(url.__str__())
-        return response.json()
-    
+
+    async def make_request(self, url: Url, client: httpx.AsyncClient):
+        if url.is_multi:
+            resp = await client.post(url.base_url, headers=self.headers, json=url.body)
+        else:
+            resp = await client.get(str(url), headers=self.headers)
+        return resp.json()
+
     async def fetch_async(self):
         async with httpx.AsyncClient() as client:
-            tasks = [Fetch.make_request(url, client) for url in self.urls]
+            tasks = [self.make_request(url, client) for url in self.urls]
             results = await asyncio.gather(*tasks)
         return results
 
+
 if __name__ == "__main__":
     async def main():
-        url = [Url((37.402464820205246, 127.10764191124568),(37.39419693653072, 127.11056336672839)), Url((37.402464820205246, 127.10764191124568),(37.39419693653072, 127.11056336672839)), Url((37.402464820205246, 127.10764191124568),(37.39419693653072, 127.11056336672839))]
-        print(url)
-        f = Fetch(url[0], url[1], url[2])
-        print(await f.fetch())
+        # 단일 목적지 예제 (GET)
+        single = Url((127.10764, 37.40246), (127.11056, 37.39419))
+        f1 = Fetch(single)
+        # print(await f1.fetch_async())
+
+        # 다중 목적지 예제 (POST)
+        multi = Url((127.13144, 37.44134),
+                    (127.14112, 37.44558),
+                    (127.14192, 37.44017),
+                    radius=5000)
+        f2 = Fetch(multi)
+        print(await f2.fetch_async())
+
     asyncio.run(main())
