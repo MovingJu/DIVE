@@ -2,6 +2,8 @@ from dotenv import load_dotenv
 import os
 import requests
 import numpy as np
+import httpx
+import asyncio
 
 load_dotenv()
 kakao_api_key=os.getenv('KAKAO_API_KEY')
@@ -23,15 +25,28 @@ async def geyAdressFromxy(x:float,y:float):
     return result.json()['documents'][0]['road_address']['address_name']
 
 async def getroutes(origin, destination, waypoints=[]):
-    url='https://apis-navi.kakaomobility.com/v1/directions'
-    headers={"Authorization":f'KakaoAK {kakao_api_key}','Content-Type':'application/json'}
-    query=''
-    if(waypoints):
-        query={'orgiin':origin,'destination':destination,'waypoints':waypoints,'alternatves':'true'}
+    url = 'https://apis-navi.kakaomobility.com/v1/directions'
+    headers = {
+        "Authorization": f'KakaoAK {kakao_api_key}',
+        'Content-Type': 'application/json'
+    }
+    if waypoints:
+        query = {
+            'origin': origin,
+            'destination': destination,
+            'waypoints': ','.join(waypoints),  # waypoints가 리스트면 문자열로 변환 필요
+        }
     else:
-        query={'origin':origin,'destination':destination,'alternatives':'true'}
-    result=requests.get(url=url,headers=headers,params=query)
-    return result.json()
+        query = {
+            'origin': origin,
+            'destination': destination,
+        }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=headers, params=query)
+        response.raise_for_status()
+        return response.json()
+
 
 async def getVertexes(origin,destination,waypoints=[]):
     result=await getroutes(origin,destination,waypoints)
@@ -45,9 +60,8 @@ async def getVertexes(origin,destination,waypoints=[]):
 
     vertexes=[]
     for i in range(0,len(results[0]),2):
-        vertexes.append((results[i],results[i+1]))
+        vertexes.append((results[0][i],results[0][i+1]))
     return vertexes
-            
 
 async def getDistance(origin,destination,waypoints=[]):
     result=await getroutes(origin,destination,waypoints)
