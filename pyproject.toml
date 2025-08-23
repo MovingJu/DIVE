@@ -16,4 +16,5 @@ dependencies = [
     "shapely>=2.1.1",
     "pip>=25.2",
     "pyjwt>=2.10.1",
+    "matplotlib>=3.10.5",
 ]

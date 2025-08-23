@@ -102,7 +102,7 @@ import modules
 # 코스트 캐시 저장소
 _cost_cache = {}
 
-async def cost(gps: tuple[float, float], next_node: tuple[float, float], layer: int, weight=1.0):
+async def cost(gps: tuple[float, float], next_node: tuple[float, float], layer: int, weight=40):
     """
     gps: 현재 노드 (lat, lon)
     next_node: 다음 레이어의 한 노드 (lat, lon)
@@ -114,9 +114,14 @@ async def cost(gps: tuple[float, float], next_node: tuple[float, float], layer: 
         return _cost_cache[key]
 
     # 카카오 API 요청 (1대1)
-    url = modules.Url(gps, next_node, radius=5000)
+    url = modules.Url(gps, next_node)
     f2 = modules.Fetch(url)
     results = await f2.fetch_async()
+    
+    vertexes = extract_all_vertexes(results[0])
+    sobang_vertexes = function()
+
+    sobang_cost = len(set(vertexes) & set(sobang_vertexes))
 
     routes = results[0].get("routes", None)
     if routes is None:  # 경로 실패
@@ -124,8 +129,8 @@ async def cost(gps: tuple[float, float], next_node: tuple[float, float], layer: 
     else:
         d = routes[0].get("summary", {}).get("distance", float("inf"))
 
-    cost_val = d + layer * weight
-    _cost_cache[key] = cost_val
+    cost_val = d + sobang_cost * weight
+    _cost_cache[key] = (cost_val, vertexes)
     return cost_val
 
 async def shortest_path(tree, weight=0.2):
@@ -179,7 +184,8 @@ if __name__ == "__main__":
         print(f"total : {tot}")
         print(f"total requests : {tot_req}")
 
-        # print(await shortest_path(grid))
+        print(await shortest_path(grid))
+        print(f"cached : {_cost_cache}")
 
     import asyncio
     asyncio.run(main())
