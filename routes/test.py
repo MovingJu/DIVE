@@ -66,7 +66,12 @@ async def kakaoregister(code : str):
 
     # 카카오 인증 서버에 액세스 토큰 요청
     resp = requests.post("https://kauth.kakao.com/oauth/token", data=data)
-    token = resp.json()['access_token']
+    
+    token=''
+    try:
+        token = resp.json()['access_token'] 
+    except:
+        return {"error":'카카오 token error'}
 
 
     headers = {
@@ -74,10 +79,17 @@ async def kakaoregister(code : str):
     }
 
     user = requests.get("https://kapi.kakao.com/v2/user/me", headers=headers)
-    userinfo=user.json()
-    userid=userinfo['id']
-    username=userinfo['properties']['nickname']
-    useremail=userinfo['kakao_account']['email']
+    userinfo = ''
+    userid = ''
+    username=''
+    useremail=''
+    try:
+        userinfo=user.json()
+        userid=userinfo['id']
+        username=userinfo['properties']['nickname']
+        useremail=userinfo['kakao_account']['email']
+    except:
+        return {'error':'userinfo request error'}
           
     db = await modules.Manage.create()
     async with db.conn.cursor() as cursor:  
@@ -93,8 +105,12 @@ async def kakaoregister(code : str):
             result=await cursor.fetchall()
         await db.close()
     
-    token = modules.create_jwt_token(userid)
-    return RedirectResponse(url=f"jasmap://oauth/kakao?JWT={token}")
+    token = ''
+    try:
+        token = modules.create_jwt_token(userid)
+        return RedirectResponse(url=f"jasmap://oauth/kakao?JWT={token}")
+    except:
+        return {"error":'jwt error'}
 
 
 
