@@ -33,6 +33,15 @@ async def class_test(table_name: str):
     return {"result": df.to_dict(orient="records")}
 
 
+
+
+@router.get('/data/adress/{adress}')
+async def getadresstoxy(adress : str):
+    result= await modules.getxyFromAdress(adress)
+    return {"result":result}
+    
+
+
 @router.post("/kakao/authentication/")
 async def kakaologin(jwt : str):
     id = modules.decode_jwt_token(jwt)
@@ -44,7 +53,9 @@ async def kakaologin(jwt : str):
     await db.close()
     return {"result" : df.to_dict(orient='records')}
     
-@router.post("/kakao/authcode")
+
+
+@router.get("/kakao/authcode")
 async def kakaoregister(authCode : str):
     data = {
         'grant_type': 'authorization_code',  
@@ -55,7 +66,7 @@ async def kakaoregister(authCode : str):
 
     # 카카오 인증 서버에 액세스 토큰 요청
     resp = requests.post("https://kauth.kakao.com/oauth/token", data=data)
-    token=resp.json()['access_token']
+    token = resp.json()['access_token']
 
 
     headers = {
@@ -85,12 +96,6 @@ async def kakaoregister(authCode : str):
     token = modules.create_jwt_token(userid)
     return RedirectResponse(url=f"jasmap://oauth/kakao?JWT={token}")
 
-
-
-@router.get('/data/adress/')
-async def getadresstoxy(adress : str):
-    return {"result":modules.getxyFromAdress(adress)}
-    
 
 
     
