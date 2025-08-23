@@ -25,8 +25,8 @@ class Setup:
     @classmethod
     async def create(cls):
         conn = await modules.get_connection()
-        async with conn.cursor(aiomysql.DictCursor) as cur:
-            await cur.execute(modules.schema.DB_TABLE_SETUP_QUERY)
+        # async with conn.cursor(aiomysql.DictCursor) as cur:
+        #     await cur.execute(modules.schema.DB_TABLE_SETUP_QUERY)
         return cls(conn)
 
     async def close(self):
