@@ -7,6 +7,8 @@ import os
 import requests
 from starlette.responses import RedirectResponse
 import httpx
+import logging
+from fastapi import Body
 
 router = APIRouter(
     prefix="/db",
@@ -44,11 +46,11 @@ async def getadresstoxy(adress : str):
 
 
 @router.post("/kakao/authentication/")
-async def kakaologin(jwt : str):
+async def kakaologin(jwt : str=Body()):
     id = modules.decode_jwt_token(jwt)
     db = await modules.Manage.create()
     async with db.conn.cursor() as cursor:  
-        await cursor.execute('SELECT user_type FROM users WHERE id = %s',(id))
+        await cursor.execute('SELECT user_type FROM users WHERE id = %s',(id,))
         result=await cursor.fetchall()
     df=pd.DataFrame(result,columns=['user_type'])
     await db.close()
@@ -107,7 +109,7 @@ async def kakaoregister(code: str):
                 await cursor.execute(
                     "INSERT INTO users (id, name, email, user_type) VALUES (%s, %s, %s, 0)",
                     (userid, username, useremail)
-                )
+                )   
                 await db.conn.commit()
     finally:
         await db.close()
@@ -118,6 +120,7 @@ async def kakaoregister(code: str):
     except Exception as e:
         return {"error": 'jwt error', "detail": str(e)}
 
+    logging.info(username,jwt_token)
     return RedirectResponse(url=f"jasmap://oauth/kakao?JWT={jwt_token}")
 
 
