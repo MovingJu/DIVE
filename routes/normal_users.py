@@ -19,7 +19,7 @@ async def get_sobang_route():
 
     return sobang_vertexes
 
-async def distribute_points_variable(lon1, lat1, lon2, lat2, area_m2 = 8_842_000, step=1000, max_per_line=6):
+async def distribute_points_variable(lon1, lat1, lon2, lat2, area_m2 = 8_842_000, step=1500, max_per_line=6):
     """
     출발-도착을 대각선으로 하는 마름모 안에 점 배치.
     - 출발~도착을 step(m) 간격으로 분할

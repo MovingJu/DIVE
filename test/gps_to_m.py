@@ -10,7 +10,7 @@ def xy_to_gps(x: float, y: float) -> tuple[float, float] :
     to_wgs = Transformer.from_crs("EPSG:5181", "EPSG:4326", always_xy=True)
     return to_wgs.transform(x, y)
 
-async def distribute_points_variable(lon1, lat1, lon2, lat2, area_m2 = 8_842_000, step=1000, max_per_line=6):
+async def distribute_points_variable(lon1, lat1, lon2, lat2, area_m2 = 8_842_000, step=1500, max_per_line=6):
     """
     출발-도착을 대각선으로 하는 마름모 안에 점 배치.
     - 출발~도착을 step(m) 간격으로 분할
@@ -172,10 +172,10 @@ if __name__ == "__main__":
         sobang_vertexes = await modules.getVertexes((129.105747814753, 35.1834432601063), (129.08586569729, 35.1893503587694))
 
         grid = await distribute_points_variable(
-            129.061903026452, 35.1946006301351,
-            129.115262179836, 35.1785037434279
+            129.059900885997, 35.194366802896,
+            129.136018268316, 35.1690637154991
         )
-
+ 
         x, y = gps_to_xy(129.061903026452, 35.1946006301351)
         a, b = gps_to_xy(129.115262179836, 35.1785037434279)
         distance = math.sqrt((x - a) ** 2 + (y - b) ** 2)
